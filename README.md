@@ -32,11 +32,25 @@ Live: **https://RyzuLabs.vercel.app**
 | 6 | OSINT | WHOIS, DNS enum, geolocation |
 | 7 | Misc | Base64 chain, Python sandbox, Brainfuck |
 
-## 1. Set up Supabase (one time)
+## 1. Configure credentials
+
+Copy `.env.example` to `.env` and fill in the two values from
+Supabase → **Project Settings → API**:
+
+```
+VITE_SUPABASE_URL=https://<your-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<your-anon-key>
+```
+
+`.env` is git-ignored; no secrets are hardcoded in the source. The app throws a
+clear error at startup if either variable is missing.
+
+## 2. Set up Supabase (one time)
 
 1. Open your Supabase project → **SQL Editor**.
 2. Paste the entire contents of [`supabase/schema.sql`](supabase/schema.sql) and click **Run**.
-   This creates `profiles`, `solves`, the `record_solve` RPC, RLS policies and the `leaderboard` view.
+   This creates `profiles`, `solves`, the `record_solve` RPC, RLS policies and the
+   `get_leaderboard` RPC. Full step-by-step SQL is in [`DEPLOY.md`](DEPLOY.md).
 3. Create an account in the app, then promote yourself to admin (SQL Editor):
 
    ```sql
@@ -48,7 +62,7 @@ Live: **https://RyzuLabs.vercel.app**
 > **Email confirmation:** required to be **off** so username-only signup returns a session immediately.
 > Supabase Dashboard → **Authentication → Providers → Email** → disable *Confirm email*.
 
-## 2. Run locally
+## 3. Run locally
 
 ```bash
 npm install
@@ -62,19 +76,20 @@ npm run build
 npm run preview
 ```
 
-Optional: copy `.env.example` → `.env` to point at a different Supabase project.
-The credentials are already baked into `src/lib/supabase.js` as fallbacks, so it works without a `.env`.
-
-## 3. Deploy to Vercel
+## 4. Deploy to Vercel
 
 The repo ships with `vercel.json` (Vite framework preset, SPA rewrite, immutable asset caching).
 
 1. Push this repo to GitHub: `Ryhandd/RyzuLab`.
 2. Go to [vercel.com/new](https://vercel.com/new) → **Import Git Repository** → pick `Ryhandd/RyzuLab`.
 3. Framework preset: **Vite**. Build command `npm run build`, output `dist` (auto-detected).
-4. (Optional) add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` under Environment Variables.
-5. **Deploy**, then open **Settings → Domains** and set the project name to `RyzuLabs` so it resolves at
+4. **Required:** add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` under
+   **Environment Variables** (Production, Preview, Development). The build fails with
+   *"Missing Supabase config"* without them — secrets are never baked into the source.
+5. **Deploy**, then open **Settings → General → Project Name** and set it to `RyzuLabs` so it resolves at
    **https://RyzuLabs.vercel.app**.
+
+Full step-by-step instructions, SQL commands and troubleshooting: [`DEPLOY.md`](DEPLOY.md).
 
 ## Project structure
 

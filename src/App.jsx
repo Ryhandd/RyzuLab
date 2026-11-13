@@ -7,8 +7,9 @@ import AuthScreen from "./components/AuthScreen";
 import ChallengeModal from "./components/ChallengeModal";
 import ActivityFeed from "./components/ActivityFeed";
 import Leaderboard from "./components/Leaderboard";
+import LogoMark from "./components/LogoMark";
 import { ToastContainer } from "./components/useToast";
-import { Loader2, Zap } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function App() {
   const { bootstrap, loading, session, profile } = useAuth();
@@ -21,21 +22,10 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Boot screen
   if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <div className="w-14 h-14 rounded-lg border border-cyber-cyan flex items-center justify-center bg-cyber-cyan/10 shadow-cyber-cyan">
-          <Zap className="w-8 h-8 text-cyber-cyan" />
-        </div>
-        <div className="flex items-center gap-2 text-cyber-dim font-mono text-sm">
-          <Loader2 className="w-4 h-4 animate-spin" /> Initializing RyzuLab…
-        </div>
-      </div>
-    );
+    return <BootScreen label="Initializing RyzuLab" />;
   }
 
-  // Not signed in
   if (!session) {
     return (
       <>
@@ -45,15 +35,8 @@ export default function App() {
     );
   }
 
-  // Loading profile right after login
   if (!profile) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <div className="flex items-center gap-2 text-cyber-dim font-mono text-sm">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading your profile…
-        </div>
-      </div>
-    );
+    return <BootScreen label="Loading your profile" />;
   }
 
   const handleChallengeSelect = (challengeId) => {
@@ -69,42 +52,49 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen">
       <ToastContainer />
-      <Header
-        onOpenAdmin={() => setShowAdmin((v) => !v)}
-        adminView={showAdmin}
-      />
+      <Header onOpenAdmin={() => setShowAdmin((v) => !v)} adminView={showAdmin} />
 
       {showAdmin && profile.is_admin ? (
-        <main className="relative z-0">
+        <main className="max-w-[1400px] mx-auto">
           <AdminDashboard onBack={() => setShowAdmin(false)} />
         </main>
       ) : (
-        <>
-          <main className="relative z-0">
+        <div className="max-w-[1400px] mx-auto lg:flex lg:items-start">
+          <main className="flex-1 min-w-0">
             <Dashboard onChallengeSelect={handleChallengeSelect} />
           </main>
 
-          {activeChallengeId && (
-            <ChallengeModal
-              challengeId={activeChallengeId}
-              onClose={() => {
-                setModalOpen(false);
-                setActiveChallengeId(null);
-              }}
-              onSolved={handleChallengeSolved}
-            />
-          )}
-
-          <aside className="fixed right-0 top-16 w-80 h-[calc(100vh-64px)] overflow-y-auto p-6 hidden lg:block border-l border-cyber-border bg-cyber-panel/80 backdrop-blur-md z-20">
+          <aside className="hidden lg:block w-[320px] shrink-0 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto p-5 space-y-4">
+            <Leaderboard />
             <ActivityFeed />
-            <div className="mt-8">
-              <Leaderboard />
-            </div>
           </aside>
-        </>
+        </div>
       )}
+
+      {activeChallengeId && (
+        <ChallengeModal
+          challengeId={activeChallengeId}
+          onClose={() => {
+            setModalOpen(false);
+            setActiveChallengeId(null);
+          }}
+          onSolved={handleChallengeSolved}
+        />
+      )}
+    </div>
+  );
+}
+
+function BootScreen({ label }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-5">
+      <LogoMark className="w-14 h-14" />
+      <div className="flex items-center gap-2 text-cyber-dim text-sm">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        {label}…
+      </div>
     </div>
   );
 }

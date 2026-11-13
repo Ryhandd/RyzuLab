@@ -2,32 +2,57 @@ import { ChevronRight } from "lucide-react";
 
 export default function CategoryCard({ category, solved, total, matchesFilter, onClick }) {
   const pct = total === 0 ? 0 : Math.round((solved / total) * 100);
-  const borderClass = matchesFilter ? category.border : "border-cyber-border";
+  const { Icon, accent } = category;
 
   return (
-    <div
-      className={`category-card glass-panel rounded-xl p-5 cursor-pointer group ${borderClass}`}
+    <button
       onClick={onClick}
+      className="category-card surface p-5 text-left group relative overflow-hidden w-full"
+      style={{
+        borderColor: matchesFilter ? `${accent}44` : undefined,
+      }}
     >
-      <div className="flex justify-between items-start mb-4">
-        <div className={`flex w-8 h-8 items-center justify-center rounded-lg ${category.color.replace("text-", "bg-")}/10 border ${category.color.replace("text-", "border-")}`}>
-          <span className="text-xs">{category.icon}</span>
-        </div>
-        <ChevronRight className="w-4 h-4 text-cyber-dim group-hover:text-cyber-cyan transition" />
-      </div>
-      <h3 className="text-lg font-bold text-white font-mono mb-1">{category.name}</h3>
-      <p className="text-xs text-cyber-dim font-mono mb-4">{category.short} challenges</p>
+      {/* accent glow */}
+      <div
+        className="absolute -top-16 -right-16 w-32 h-32 rounded-full blur-2xl opacity-0 group-hover:opacity-40 transition-opacity duration-300"
+        style={{ background: accent }}
+      />
 
-      <div className="flex items-center justify-between text-xs font-mono">
-        <span className="text-white">{solved}</span>
-        <span className="text-cyber-dim">{total}</span>
+      <div className="relative flex justify-between items-start mb-4">
+        <div
+          className="w-11 h-11 rounded-xl flex items-center justify-center border"
+          style={{ background: `${accent}14`, borderColor: `${accent}33` }}
+        >
+          <Icon className="w-5 h-5" style={{ color: accent }} />
+        </div>
+        <ChevronRight className="w-4 h-4 text-cyber-muted group-hover:text-white group-hover:translate-x-0.5 transition" />
       </div>
-      <div className="progress-track mt-2">
-        <div className="progress-fill" style={{ width: `${pct}%` }} />
-      </div>
-      <p className="text-[10px] text-cyber-dim mt-1 text-right">
-        {pct}% complete
+
+      <h3 className="relative text-base font-semibold text-white mb-1 tracking-tight">
+        {category.name}
+      </h3>
+      <p className="relative text-xs text-cyber-muted mb-5">
+        {solved} of {total} solved
       </p>
-    </div>
+
+      <div className="relative">
+        <div className="progress-track">
+          <div
+            className="progress-fill"
+            style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${accent}, ${accent}aa)` }}
+          />
+        </div>
+        <div className="flex justify-between items-center mt-2">
+          <span className="text-[10px] text-cyber-muted tracking-wide uppercase">
+            {pct === 100 ? "Mastered" : `${pct}% complete`}
+          </span>
+          {pct === 100 && (
+            <span className="text-[10px] font-semibold" style={{ color: accent }}>
+              ✓
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
   );
 }

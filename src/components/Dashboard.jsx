@@ -1,18 +1,10 @@
 import { useState, useMemo } from "react";
-import { useAuth } from "../store/useAuth";
-import { CATEGORIES, DIFFICULTIES, CATEGORY_BY_ID } from "../data/categories";
+import { useAuth, getRankForScore } from "../store/useAuth";
+import { CATEGORIES, CATEGORY_BY_ID } from "../data/categories";
 import { CHALLENGES } from "../data/challenges";
-import { SlidersHorizontal, BookOpen, Trophy } from "lucide-react";
-import CategoryCard from "./CategoryCard";
+import { SearchX, Sparkles } from "lucide-react";import CategoryCard from "./CategoryCard";
 import ChallengeCard from "./ChallengeCard";
 import GlobalLeaderboard from "./GlobalLeaderboard";
-
-const DIFF_ACTIVE = {
-  Easy: "bg-cyber-green/20 border-cyber-green text-cyber-green",
-  Medium: "bg-cyber-amber/20 border-cyber-amber text-cyber-amber",
-  Hard: "bg-cyber-magenta/20 border-cyber-magenta text-cyber-magenta",
-  Insane: "bg-cyber-cyan/20 border-cyber-cyan text-cyber-cyan",
-};
 
 export default function Dashboard({ onChallengeSelect }) {
   const { solved, profile } = useAuth();
@@ -21,6 +13,10 @@ export default function Dashboard({ onChallengeSelect }) {
 
   const totalChallenges = CHALLENGES.length;
   const totalSolved = Object.keys(solved).length;
+  const score = profile?.total_score ?? 0;
+  const streak = profile?.streak ?? 0;
+  const rank = getRankForScore(score);
+  const overallPct = Math.round((totalSolved / totalChallenges) * 100);
 
   const filtered = useMemo(() => {
     return CHALLENGES.filter((c) => {
@@ -30,115 +26,92 @@ export default function Dashboard({ onChallengeSelect }) {
     });
   }, [selectedCategory, selectedDifficulty]);
 
-  const solvedIds = Object.keys(solved);
-
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-      {/* Stats row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="glass-panel rounded-xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="p-5 md:p-8 max-w-6xl mx-auto space-y-7">
+      {/* Hero */}
+      <section className="surface p-6 md:p-7 relative overflow-hidden">
+        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
+        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <p className="text-[10px] text-cyber-dim font-mono uppercase tracking-wider">TOTAL SCORE</p>
-            <p className="text-3xl font-bold text-white font-mono">{(profile?.total_score ?? 0).toLocaleString()}</p>
+            <p className="label-caps mb-2">Welcome back</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight mb-1">
+              @{profile?.username}
+            </h2>
+            <p className="text-sm text-cyber-dim">
+              You're <span className="text-cyber-cyan font-medium">{rank}</span>
+              {streak > 0 && <> · on a <span className="text-cyber-amber font-medium">{streak}-day streak</span></>}
+            </p>
           </div>
-          <div className="flex items-center gap-2 text-cyber-cyan font-mono">
-            <span>{profile?.total_score ?? 0}</span> <span className="text-cyber-dim text-xs">pts</span>
+
+          <div className="flex gap-3">
+            <OnboardStat value={score.toLocaleString()} label="Total score" hint="pts" accent="#22d3ee" />
+            <OnboardStat value={`${totalSolved}/${totalChallenges}`} label="Solved" hint={`${overallPct}%`} accent="#34d399" />
           </div>
         </div>
-        <div className="glass-panel rounded-xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <p className="text-[10px] text-cyber-dim font-mono uppercase tracking-wider">SOLVED CHALLENGES</p>
-            <p className="text-3xl font-bold text-white font-mono">{totalSolved}</p>
+
+        {/* Overall progress */}
+        <div className="relative mt-6">
+          <div className="flex justify-between items-center mb-2">
+            <span className="label-caps">Overall progress</span>
+            <span className="text-xs text-cyber-dim tabular-nums">{overallPct}%</span>
           </div>
-          <div className="w-full md:w-auto h-2 bg-cyber-border rounded-full overflow-hidden">
-            <div
-              className="h-full bg-cyber-green shadow-cyber-green"
-              style={{ width: `${Math.round((totalSolved / totalChallenges) * 100)}%` }}
-            />
-          </div>
-          <span className="text-xs text-cyber-dim font-mono">
-            {totalSolved}/{totalChallenges}
-          </span>
-        </div>
-        <div className="glass-panel rounded-xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <p className="text-[10px] text-cyber-dim font-mono uppercase tracking-wider">DAILY STREAK</p>
-            <p className="text-3xl font-bold text-white font-mono">{profile?.streak ?? 0}</p>
-          </div>
-          <div className="flex items-center gap-1 text-cyber-amber font-mono">
-            <span>{profile?.streak ?? 0}</span> <span className="text-cyber-dim text-xs">days</span>
+          <div className="progress-track h-2">
+            <div className="progress-fill" style={{ width: `${overallPct}%` }} />
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Filters */}
-      <div className="glass-panel rounded-xl p-5 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="w-4 h-4 text-cyber-dim" />
-          <span className="text-xs text-cyber-dim font-mono uppercase">FILTER</span>
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          <button
-            onClick={() => setSelectedCategory("all")}
-            className={`px-3 py-1.5 rounded-md text-xs font-mono border transition ${
-              selectedCategory === "all"
-                ? "bg-cyber-cyan/20 border-cyber-cyan text-cyber-cyan"
-                : "border-cyber-border text-cyber-dim hover:border-cyber-cyan"
-            }`}
-          >
-            All Categories
-          </button>
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="label-caps mr-1">Categories</span>
+          <FilterChip active={selectedCategory === "all"} onClick={() => setSelectedCategory("all")}>
+            All
+          </FilterChip>
           {CATEGORIES.map((cat) => (
-            <button
+            <FilterChip
               key={cat.id}
+              active={selectedCategory === cat.id}
+              accent={cat.accent}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-md text-xs font-mono border transition ${
-                selectedCategory === cat.id
-                  ? "bg-cyber-cyan/10 border-cyber-cyan text-cyber-cyan"
-                  : "border-cyber-border text-cyber-dim hover:border-cyber-cyan"
-              }`}
             >
               {cat.short}
-            </button>
+            </FilterChip>
           ))}
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1 ml-auto">
-          <button
-            onClick={() => setSelectedDifficulty("all")}
-            className={`px-3 py-1.5 rounded-md text-xs font-mono border transition ${
-              selectedDifficulty === "all"
-                ? "bg-cyber-cyan/20 border-cyber-cyan text-cyber-cyan"
-                : "border-cyber-border text-cyber-dim hover:border-cyber-cyan"
-            }`}
-          >
-            All Difficulty
-          </button>
-          {DIFFICULTIES.map((d) => (
-            <button
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="label-caps mr-1">Difficulty</span>
+          <FilterChip active={selectedDifficulty === "all"} onClick={() => setSelectedDifficulty("all")}>
+            All
+          </FilterChip>
+          {[
+            { id: "Easy", accent: "#34d399" },
+            { id: "Medium", accent: "#fbbf24" },
+            { id: "Hard", accent: "#f472b6" },
+            { id: "Insane", accent: "#22d3ee" },
+          ].map((d) => (
+            <FilterChip
               key={d.id}
+              active={selectedDifficulty === d.id}
+              accent={d.accent}
               onClick={() => setSelectedDifficulty(d.id)}
-              className={`px-3 py-1.5 rounded-md text-xs font-mono border transition ${
-                selectedDifficulty === d.id
-                  ? DIFF_ACTIVE[d.id]
-                  : "border-cyber-border text-cyber-dim hover:border-cyber-cyan"
-              }`}
             >
-              {d.label}
-            </button>
+              {d.id}
+            </FilterChip>
           ))}
+          <span className="ml-auto text-xs text-cyber-muted tabular-nums">
+            {filtered.length} challenge{filtered.length !== 1 ? "s" : ""}
+          </span>
         </div>
-        <span className="text-xs text-cyber-dim font-mono ml-auto">
-          {filtered.length} challenge{filtered.length !== 1 ? "s" : ""}
-        </span>
-      </div>
+      </section>
 
       {/* Category grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {CATEGORIES.map((cat) => {
           const catChallenges = CHALLENGES.filter((c) => c.category === cat.id);
           const catSolved = catChallenges.filter((c) => solved[c.id]).length;
-          const matchesFilter =
-            selectedCategory === "all" || selectedCategory === cat.id;
+          const matchesFilter = selectedCategory === "all" || selectedCategory === cat.id;
           return (
             <CategoryCard
               key={cat.id}
@@ -150,30 +123,41 @@ export default function Dashboard({ onChallengeSelect }) {
             />
           );
         })}
-      </div>
+        {/* filler keeps the last row balanced when 7 cards on a 4-col grid */}
+        <div className="hidden xl:block surface p-5 flex flex-col justify-between bg-white/[0.015] border-dashed">
+          <div>
+            <div className="w-11 h-11 rounded-xl border border-cyber-border flex items-center justify-center mb-4">
+              <Sparkles className="w-5 h-5 text-cyber-muted" />
+            </div>
+            <h3 className="text-base font-semibold text-white mb-1 tracking-tight">All categories</h3>
+            <p className="text-xs text-cyber-muted mb-5">Clear the filter to see everything</p>
+          </div>
+          <button
+            onClick={() => setSelectedCategory("all")}
+            className="btn-secondary w-full py-2 text-xs font-medium"
+          >
+            Show all
+          </button>
+        </div>
+      </section>
 
       {/* Challenge grid */}
-      <div className="mt-4">
+      <section>
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-cyber-cyan" />
-            <h2 className="text-lg font-bold text-white font-mono">
-              {selectedCategory === "all"
-                ? "All Challenges"
-                : CATEGORY_BY_ID[selectedCategory]?.name}
-            </h2>
-          </div>
-          <span className="text-xs text-cyber-dim font-mono">
+          <h2 className="text-lg font-semibold text-white tracking-tight">
+            {selectedCategory === "all"
+              ? "All challenges"
+              : CATEGORY_BY_ID[selectedCategory]?.name}
+          </h2>
+          <span className="text-xs text-cyber-muted">
             {filtered.filter((c) => !solved[c.id]).length} unsolved
           </span>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="text-center py-12 glass-panel rounded-xl">
-            <BookOpen className="w-12 h-12 mx-auto text-cyber-dim mb-3 opacity-50" />
-            <p className="text-cyber-dim text-sm font-mono">
-              No challenges match this filter.
-            </p>
+          <div className="surface p-12 flex flex-col items-center text-center">
+            <SearchX className="w-9 h-9 text-cyber-muted mb-3" />
+            <p className="text-cyber-dim text-sm">No challenges match this filter.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -186,10 +170,42 @@ export default function Dashboard({ onChallengeSelect }) {
             ))}
           </div>
         )}
-      </div>
+      </section>
 
       {/* Global leaderboard */}
-      <GlobalLeaderboard />
+      <section>
+        <GlobalLeaderboard />
+      </section>
     </div>
+  );
+}
+
+function OnboardStat({ value, label, hint, accent }) {
+  return (
+    <div className="surface-flat px-4 py-3 min-w-[104px]">
+      <div className="text-xl font-bold text-white tabular-nums leading-none">{value}</div>
+      <div className="mt-1.5 flex items-baseline gap-1.5">
+        <span className="text-[10px] uppercase tracking-[0.12em]" style={{ color: accent }}>
+          {label}
+        </span>
+        <span className="text-[10px] text-cyber-muted">{hint}</span>
+      </div>
+    </div>
+  );
+}
+
+function FilterChip({ active, accent, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`chip ${active ? "chip-active" : ""}`}
+      style={
+        active && accent
+          ? { color: accent, borderColor: `${accent}66`, background: `${accent}14` }
+          : undefined
+      }
+    >
+      {children}
+    </button>
   );
 }

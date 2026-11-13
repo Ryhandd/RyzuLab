@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../store/useAuth";
 import {
-  Gauge,
   Users,
   Trophy,
   Flame,
@@ -13,6 +12,8 @@ import {
   ShieldCheck,
   Loader2,
   ArrowLeft,
+  UserRound,
+  AlertCircle,
 } from "lucide-react";
 
 const SORTS = [
@@ -48,6 +49,7 @@ export default function AdminDashboard({ onBack }) {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const visible = useMemo(() => {
@@ -55,7 +57,7 @@ export default function AdminDashboard({ onBack }) {
     const q = query.trim().toLowerCase();
     let rows = users;
     if (q) rows = rows.filter((u) => u.username.toLowerCase().includes(q));
-    rows = [...rows].sort((a, b) => {
+    return [...rows].sort((a, b) => {
       const av = a[cfg.key];
       const bv = b[cfg.key];
       if (av == null && bv == null) return 0;
@@ -64,7 +66,6 @@ export default function AdminDashboard({ onBack }) {
       if (cfg.dir) return av > bv ? 1 : av < bv ? -1 : 0;
       return av < bv ? 1 : av > bv ? -1 : 0;
     });
-    return rows;
   }, [users, query, sort]);
 
   const totals = useMemo(() => {
@@ -77,32 +78,24 @@ export default function AdminDashboard({ onBack }) {
     d ? new Date(d).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-5 md:p-8 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded border border-cyber-magenta bg-cyber-magenta/10 flex items-center justify-center text-cyber-magenta">
-            <Gauge className="w-5 h-5" />
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-accent-deep/15 border border-accent-deep/30 flex items-center justify-center">
+            <ShieldCheck className="w-5 h-5 text-accent-deep" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white font-mono">Admin Control</h1>
-            <p className="text-xs text-cyber-dim font-mono uppercase tracking-wider">
-              Monitoring · {profile?.username}
-            </p>
+            <h1 className="text-lg font-semibold text-white tracking-tight">Admin dashboard</h1>
+            <p className="text-xs text-cyber-dim">Monitoring all players · signed in as @{profile?.username}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={load}
-            className="btn-secondary px-3 py-2 rounded-md text-xs font-mono flex items-center gap-2"
-          >
+          <button onClick={load} className="btn-secondary px-3.5 py-2 text-xs font-medium flex items-center gap-2">
             <RefreshCw className={`w-3.5 h-3.5 ${state === "loading" ? "animate-spin" : ""}`} />
             Refresh
           </button>
-          <button
-            onClick={onBack}
-            className="btn-secondary px-3 py-2 rounded-md text-xs font-mono flex items-center gap-2"
-          >
+          <button onClick={onBack} className="btn-secondary px-3.5 py-2 text-xs font-medium flex items-center gap-2">
             <ArrowLeft className="w-3.5 h-3.5" />
             Dashboard
           </button>
@@ -111,34 +104,31 @@ export default function AdminDashboard({ onBack }) {
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard icon={Users} label="Total Users" value={totals.count} color="cyan" />
-        <StatCard icon={Trophy} label="Combined Score" value={totals.score.toLocaleString()} color="amber" />
-        <StatCard icon={Flame} label="Active Streaks" value={totals.active} color="green" />
+        <StatCard icon={Users} label="Total users" value={totals.count} accent="#22d3ee" />
+        <StatCard icon={Trophy} label="Combined score" value={totals.score.toLocaleString()} accent="#fbbf24" />
+        <StatCard icon={Flame} label="Active streaks" value={totals.active} accent="#34d399" />
       </div>
 
       {/* Controls */}
-      <div className="glass-panel rounded-xl p-4 flex flex-col md:flex-row md:items-center gap-3">
+      <div className="surface-flat p-4 flex flex-col md:flex-row md:items-center gap-3">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-cyber-dim absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-cyber-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search username…"
-            className="input-terminal w-full pl-10 pr-3 py-2.5 rounded-md text-sm"
+            className="input-terminal w-full pl-10 pr-3 py-2.5 text-sm"
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto">
+        <div className="flex gap-2 overflow-x-auto pb-0.5">
           {SORTS.map((s) => {
             const Icon = s.icon;
+            const active = sort === s.id;
             return (
               <button
                 key={s.id}
                 onClick={() => setSort(s.id)}
-                className={`px-3 py-2 rounded-md text-xs font-mono border whitespace-nowrap flex items-center gap-1.5 transition ${
-                  sort === s.id
-                    ? "bg-cyber-cyan/10 border-cyber-cyan text-cyber-cyan"
-                    : "border-cyber-border text-cyber-dim hover:border-cyber-cyan"
-                }`}
+                className={`chip ${active ? "chip-active" : ""} whitespace-nowrap`}
               >
                 <Icon className="w-3.5 h-3.5" />
                 {s.label}
@@ -149,34 +139,39 @@ export default function AdminDashboard({ onBack }) {
       </div>
 
       {/* Table */}
-      <div className="glass-panel rounded-xl overflow-hidden">
+      <div className="surface overflow-hidden">
         {state === "error" ? (
-          <div className="p-6 text-sm text-cyber-magenta font-mono">
-            Failed to load users: {err}
-            <p className="text-cyber-dim mt-2 text-xs">
-              Make sure the schema SQL was applied and your account has is_admin = true.
-            </p>
+          <div className="p-6 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-cyber-magenta shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-cyber-magenta font-medium">Failed to load users: {err}</p>
+              <p className="text-xs text-cyber-dim mt-1.5 leading-relaxed">
+                Make sure the schema SQL was applied and your account has <code className="text-cyber-cyan">is_admin = true</code>.
+              </p>
+            </div>
           </div>
-        ) : state === "loading" ? (
-          <div className="p-10 flex items-center justify-center text-cyber-dim font-mono text-sm gap-2">
+        ) : state === "loading" && users.length === 0 ? (
+          <div className="p-10 flex items-center justify-center text-cyber-dim text-sm gap-2">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading users…
           </div>
         ) : visible.length === 0 ? (
-          <div className="p-10 text-center text-cyber-dim font-mono text-sm">
+          <div className="p-10 flex flex-col items-center gap-2 text-cyber-muted text-sm">
+            <UserRound className="w-7 h-7" />
             No users found.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-cyber-border text-[10px] text-cyber-dim font-mono uppercase tracking-wider">
-                  <th className="px-4 py-3">#</th>
-                  <th className="px-4 py-3">Username</th>
-                  <th className="px-4 py-3 text-right">Score</th>
-                  <th className="px-4 py-3 text-right">Streak</th>
-                  <th className="px-4 py-3">Last Solve</th>
-                  <th className="px-4 py-3">Joined</th>
-                  <th className="px-4 py-3">Role</th>
+                <tr className="border-b border-cyber-border">
+                  {["#", "Username", "Score", "Streak", "Last solve", "Joined", "Role"].map((h, i) => (
+                    <th
+                      key={h}
+                      className={`label-caps px-4 py-3 ${i === 2 || i === 3 ? "text-right" : ""}`}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -185,31 +180,38 @@ export default function AdminDashboard({ onBack }) {
                   return (
                     <tr
                       key={u.id}
-                      className={`border-b border-cyber-border/40 text-sm font-mono transition hover:bg-cyber-cyan/5 ${
-                        isMe ? "bg-cyber-cyan/5" : ""
+                      className={`border-b border-cyber-border/60 transition hover:bg-white/[0.03] ${
+                        isMe ? "bg-accent/[0.06]" : ""
                       }`}
                     >
-                      <td className="px-4 py-3 text-cyber-dim">{i + 1}</td>
+                      <td className="px-4 py-3 text-xs text-cyber-muted tabular-nums">{i + 1}</td>
                       <td className="px-4 py-3">
-                        <span className={isMe ? "text-cyber-cyan font-bold" : "text-white"}>
-                          {u.username}
-                        </span>
-                        {isMe && <span className="text-cyber-dim text-xs"> (you)</span>}
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent-soft to-accent-deep flex items-center justify-center text-[11px] font-bold text-ink-950 shrink-0">
+                            {u.username?.[0]?.toUpperCase() || "?"}
+                          </div>
+                          <span className={`text-sm ${isMe ? "text-cyber-cyan font-semibold" : "text-white"}`}>
+                            {u.username}
+                            {isMe && <span className="text-cyber-muted font-normal"> (you)</span>}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-right text-white font-bold">
+                      <td className="px-4 py-3 text-right text-sm font-semibold text-white tabular-nums">
                         {(u.total_score ?? 0).toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-right text-cyber-amber">{u.streak ?? 0}d</td>
-                      <td className="px-4 py-3 text-cyber-dim text-xs">{fmtDate(u.last_solve)}</td>
-                      <td className="px-4 py-3 text-cyber-dim text-xs">{fmtDate(u.created_at)}</td>
+                      <td className="px-4 py-3 text-right text-sm text-cyber-amber tabular-nums">
+                        {u.streak ?? 0}d
+                      </td>
+                      <td className="px-4 py-3 text-xs text-cyber-dim">{fmtDate(u.last_solve)}</td>
+                      <td className="px-4 py-3 text-xs text-cyber-dim">{fmtDate(u.created_at)}</td>
                       <td className="px-4 py-3">
                         {u.is_admin ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] text-cyber-magenta border border-cyber-magenta/50 px-2 py-0.5 rounded">
-                            <ShieldCheck className="w-3 h-3" /> ADMIN
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-accent-deep bg-accent-deep/12 border border-accent-deep/30 px-2 py-0.5 rounded-md uppercase tracking-wide">
+                            <ShieldCheck className="w-3 h-3" /> Admin
                           </span>
                         ) : (
-                          <span className="text-[10px] text-cyber-dim border border-cyber-border px-2 py-0.5 rounded">
-                            USER
+                          <span className="text-[10px] text-cyber-muted border border-cyber-border px-2 py-0.5 rounded-md uppercase tracking-wide">
+                            User
                           </span>
                         )}
                       </td>
@@ -222,27 +224,25 @@ export default function AdminDashboard({ onBack }) {
         )}
       </div>
 
-      <p className="text-[10px] text-cyber-dim font-mono">
-        Showing {visible.length} of {users.length} users · click a column sort above · data live from Supabase.
+      <p className="text-[11px] text-cyber-muted">
+        Showing {visible.length} of {users.length} users · live from Supabase
       </p>
     </div>
   );
 }
 
-function StatCard({ icon: Icon, label, value, color }) {
-  const colorMap = {
-    cyan: "text-cyber-cyan border-cyber-cyan/40",
-    amber: "text-cyber-amber border-cyber-amber/40",
-    green: "text-cyber-green border-cyber-green/40",
-  };
+function StatCard({ icon: Icon, label, value, accent }) {
   return (
-    <div className="glass-panel rounded-xl p-5 flex items-center justify-between">
+    <div className="surface p-5 flex items-center justify-between">
       <div>
-        <p className="text-[10px] text-cyber-dim font-mono uppercase tracking-wider">{label}</p>
-        <p className="text-2xl font-bold text-white font-mono mt-1">{value}</p>
+        <p className="label-caps">{label}</p>
+        <p className="text-2xl font-bold text-white tabular-nums mt-1.5">{value}</p>
       </div>
-      <div className={`w-10 h-10 rounded-lg border flex items-center justify-center ${colorMap[color]}`}>
-        <Icon className="w-5 h-5" />
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center border"
+        style={{ background: `${accent}14`, borderColor: `${accent}33` }}
+      >
+        <Icon className="w-5 h-5" style={{ color: accent }} />
       </div>
     </div>
   );

@@ -15,24 +15,22 @@ export default function CodeArtifact({ artifact }) {
   };
 
   return (
-    <div className="mb-4">
+    <div className="mb-3 last:mb-0">
       {artifact.label && (
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-[10px] text-cyber-dim font-mono uppercase tracking-wider">
+        <div className="mb-1.5">
+          <span className="text-[10px] uppercase tracking-[0.12em] text-cyber-muted">
             {artifact.label}
           </span>
         </div>
       )}
       <div className="code-block">
-        <pre className="p-3 font-mono text-xs overflow-x-auto text-cyber-green select-text">
-          {artifact.content}
-        </pre>
-        <button
-          onClick={handleCopy}
-          className={`copy-btn ${copied ? "text-cyber-green" : ""}`}
-          title="Copy"
-        >
-          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+        <pre className="select-text">{artifact.content}</pre>
+        <button onClick={handleCopy} className="copy-btn" title="Copy">
+          {copied ? (
+            <Check className="w-3.5 h-3.5 text-cyber-green" />
+          ) : (
+            <Copy className="w-3.5 h-3.5" />
+          )}
         </button>
       </div>
     </div>

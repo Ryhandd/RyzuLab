@@ -1,94 +1,92 @@
-import { useState } from "react";
 import { useAuth, getRankForScore } from "../store/useAuth";
-import { Zap, User, Flame, ShieldAlert, LogOut, Gauge } from "lucide-react";
+import LogoMark from "./LogoMark";
+import { Flame, LogOut, Gauge } from "lucide-react";
 
-const RANK_COLORS = {
-  "Script Kiddie": "text-cyber-dim border-cyber-border",
-  "Cyber Ninja": "text-cyber-green border-cyber-green",
-  "Elite Hacker": "text-cyber-cyan border-cyber-cyan",
-  Grandmaster: "text-cyber-magenta border-cyber-magenta",
+const RANK_ACCENT = {
+  "Script Kiddie": "#94a3b8",
+  "Cyber Ninja": "#34d399",
+  "Elite Hacker": "#22d3ee",
+  Grandmaster: "#818cf8",
 };
 
 export default function Header({ onOpenAdmin, adminView }) {
   const { profile, signOut } = useAuth();
-  const [showAbout, setShowAbout] = useState(false);
   const score = profile?.total_score ?? 0;
   const streak = profile?.streak ?? 0;
   const rank = getRankForScore(score);
-  const rankColor = RANK_COLORS[rank] || RANK_COLORS["Script Kiddie"];
+  const rankAccent = RANK_ACCENT[rank] || RANK_ACCENT["Script Kiddie"];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-cyber-border bg-cyber-panel/80 backdrop-blur-md">
-      <div className="flex items-center justify-between px-6 py-3">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setShowAbout(!showAbout)}>
-          <div className="w-8 h-8 rounded border border-cyber-cyan flex items-center justify-center bg-cyber-cyan/10 shadow-cyber-cyan">
-            <Zap className="w-5 h-5 text-cyber-cyan" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold tracking-tight text-white font-mono neonshift">
-              RYZULAB<span className="text-cyber-cyan">.ENGINE</span>
+    <header className="sticky top-0 z-40 border-b border-cyber-border bg-[rgba(11,17,32,0.82)] backdrop-blur-xl">
+      <div className="flex items-center justify-between px-5 md:px-8 h-16">
+        {/* Brand */}
+        <div className="flex items-center gap-3">
+          <LogoMark className="w-9 h-9" />
+          <div className="leading-tight">
+            <h1 className="text-[15px] font-bold text-white tracking-tight">
+              RyzuLab
+              <span className="text-cyber-cyan">.</span>
             </h1>
-            <p className="text-xs text-cyber-dim font-mono uppercase tracking-widest">
-              CTF Training Platform
+            <p className="text-[10px] text-cyber-muted tracking-[0.18em] uppercase">
+              CTF Training
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="hidden md:flex flex-col items-end gap-1">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-cyber-cyan" />
-              <span className="text-sm font-mono font-bold text-white">
-                {score.toLocaleString()}
-              </span>
-              <span className="text-[10px] text-cyber-dim font-mono uppercase">TOTAL SCORE</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 text-cyber-amber" />
-              <span className="text-sm font-mono font-bold text-white">{streak}</span>
-              <span className="text-[10px] text-cyber-dim font-mono uppercase">DAY STREAK</span>
-            </div>
-          </div>
+        {/* Right cluster */}
+        <div className="flex items-center gap-2 md:gap-3">
+          <StatPill icon={Gauge} label="Score" value={score.toLocaleString()} accent="#22d3ee" />
+          <StatPill icon={Flame} label="Streak" value={`${streak}d`} accent="#fbbf24" />
 
-          <div className={`rank-badge ${rankColor}`}>
-            <User className="w-3 h-3" />
+          <span
+            className="rank-badge hidden sm:inline-flex"
+            style={{ color: rankAccent, borderColor: `${rankAccent}55`, background: `${rankAccent}12` }}
+          >
             {rank}
+          </span>
+
+          <div className="hidden lg:flex items-center gap-2 pl-3 ml-1 border-l border-cyber-border">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent-soft to-accent-deep flex items-center justify-center text-[11px] font-bold text-ink-950">
+              {profile?.username?.[0]?.toUpperCase() || "?"}
+            </div>
+            <span className="text-sm text-cyber-dim">@{profile?.username}</span>
           </div>
 
           {profile?.is_admin && (
             <button
               onClick={onOpenAdmin}
               title="Admin dashboard"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono border transition ${
+              className={`p-2 rounded-lg transition ${
                 adminView
-                  ? "bg-cyber-magenta/20 border-cyber-magenta text-cyber-magenta"
-                  : "border-cyber-border text-cyber-dim hover:border-cyber-magenta hover:text-cyber-magenta"
+                  ? "bg-accent/15 text-cyber-cyan"
+                  : "text-cyber-muted hover:text-cyber-cyan hover:bg-white/5"
               }`}
             >
-              <Gauge className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Admin</span>
+              <Gauge className="w-4 h-4" />
             </button>
           )}
-
-          <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-cyber-dim">
-            <span className="text-cyber-cyan">@{profile?.username}</span>
-          </div>
 
           <button
             onClick={signOut}
             title="Sign out"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono border border-cyber-border text-cyber-dim hover:border-cyber-magenta hover:text-cyber-magenta transition"
+            className="p-2 rounded-lg text-cyber-muted hover:text-cyber-magenta hover:bg-white/5 transition"
           >
-            <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Logout</span>
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>
-      {showAbout && (
-        <div className="px-6 pb-3 border-t border-cyber-border text-cyber-dim text-sm font-mono">
-          Score: Easy 100 · Medium 300 · Hard 500 · Insane 1000. Progress saved to your account.
-        </div>
-      )}
     </header>
+  );
+}
+
+function StatPill({ icon: Icon, label, value, accent }) {
+  return (
+    <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-cyber-border bg-white/[0.02]">
+      <Icon className="w-4 h-4" style={{ color: accent }} />
+      <div className="leading-none">
+        <div className="text-[9px] uppercase tracking-[0.14em] text-cyber-muted">{label}</div>
+        <div className="text-sm font-semibold text-white mt-0.5 tabular-nums">{value}</div>
+      </div>
+    </div>
   );
 }

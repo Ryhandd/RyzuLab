@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useAuth, getRankForScore } from "../store/useAuth";
-import { CATEGORIES, CATEGORY_BY_ID } from "../data/categories";
+import { CATEGORIES, CATEGORY_BY_ID, DIFFICULTY_ACCENT } from "../data/categories";
 import { CHALLENGES } from "../data/challenges";
-import { SearchX, Sparkles } from "lucide-react";import CategoryCard from "./CategoryCard";
+import { SearchX, Sparkles, X } from "lucide-react";
+import CategoryCard from "./CategoryCard";
 import ChallengeCard from "./ChallengeCard";
 import GlobalLeaderboard from "./GlobalLeaderboard";
 
@@ -10,6 +11,18 @@ export default function Dashboard({ onChallengeSelect }) {
   const { solved, profile } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
+  const challengeGridRef = useRef(null);
+
+  // When a filter changes, bring the challenge list into view so the user
+  // immediately sees that the filter applied. Without this the grid sits
+  // below the fold and filtering looks like a dead click.
+  const applyFilter = (nextCategory, nextDifficulty) => {
+    if (nextCategory !== undefined) setSelectedCategory(nextCategory);
+    if (nextDifficulty !== undefined) setSelectedDifficulty(nextDifficulty);
+    requestAnimationFrame(() => {
+      challengeGridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   const totalChallenges = CHALLENGES.length;
   const totalSolved = Object.keys(solved).length;
@@ -65,7 +78,7 @@ export default function Dashboard({ onChallengeSelect }) {
       <section className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="label-caps mr-1">Categories</span>
-          <FilterChip active={selectedCategory === "all"} onClick={() => setSelectedCategory("all")}>
+          <FilterChip active={selectedCategory === "all"} onClick={() => applyFilter("all", selectedDifficulty)}>
             All
           </FilterChip>
           {CATEGORIES.map((cat) => (
@@ -73,7 +86,7 @@ export default function Dashboard({ onChallengeSelect }) {
               key={cat.id}
               active={selectedCategory === cat.id}
               accent={cat.accent}
-              onClick={() => setSelectedCategory(cat.id)}
+              onClick={() => applyFilter(selectedCategory === cat.id ? "all" : cat.id, selectedDifficulty)}
             >
               {cat.short}
             </FilterChip>
@@ -82,7 +95,7 @@ export default function Dashboard({ onChallengeSelect }) {
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="label-caps mr-1">Difficulty</span>
-          <FilterChip active={selectedDifficulty === "all"} onClick={() => setSelectedDifficulty("all")}>
+          <FilterChip active={selectedDifficulty === "all"} onClick={() => applyFilter(selectedCategory, "all")}>
             All
           </FilterChip>
           {[
@@ -95,7 +108,7 @@ export default function Dashboard({ onChallengeSelect }) {
               key={d.id}
               active={selectedDifficulty === d.id}
               accent={d.accent}
-              onClick={() => setSelectedDifficulty(d.id)}
+              onClick={() => applyFilter(selectedCategory, selectedDifficulty === d.id ? "all" : d.id)}
             >
               {d.id}
             </FilterChip>
@@ -119,7 +132,7 @@ export default function Dashboard({ onChallengeSelect }) {
               solved={catSolved}
               total={catChallenges.length}
               matchesFilter={matchesFilter}
-              onClick={() => setSelectedCategory(cat.id)}
+              onClick={() => applyFilter(selectedCategory === cat.id ? "all" : cat.id, selectedDifficulty)}
             />
           );
         })}
@@ -133,7 +146,7 @@ export default function Dashboard({ onChallengeSelect }) {
             <p className="text-xs text-cyber-muted mb-5">Clear the filter to see everything</p>
           </div>
           <button
-            onClick={() => setSelectedCategory("all")}
+            onClick={() => applyFilter("all", "all")}
             className="btn-secondary w-full py-2 text-xs font-medium"
           >
             Show all
@@ -142,13 +155,31 @@ export default function Dashboard({ onChallengeSelect }) {
       </section>
 
       {/* Challenge grid */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white tracking-tight">
-            {selectedCategory === "all"
-              ? "All challenges"
-              : CATEGORY_BY_ID[selectedCategory]?.name}
-          </h2>
+      <section ref={challengeGridRef} className="scroll-mt-20">
+        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <h2 className="text-lg font-semibold text-white tracking-tight truncate">
+              {selectedCategory === "all"
+                ? "All challenges"
+                : CATEGORY_BY_ID[selectedCategory]?.name}
+            </h2>
+            {selectedDifficulty !== "all" && (
+              <span
+                className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] px-2 py-1 rounded-md border"
+                style={{ color: DIFFICULTY_ACCENT[selectedDifficulty], borderColor: `${DIFFICULTY_ACCENT[selectedDifficulty]}44`, background: `${DIFFICULTY_ACCENT[selectedDifficulty]}12` }}
+              >
+                {selectedDifficulty}
+              </span>
+            )}
+            {(selectedCategory !== "all" || selectedDifficulty !== "all") && (
+              <button
+                onClick={() => applyFilter("all", "all")}
+                className="shrink-0 inline-flex items-center gap-1 text-[11px] text-cyber-muted hover:text-white transition"
+              >
+                <X className="w-3 h-3" /> Clear
+              </button>
+            )}
+          </div>
           <span className="text-xs text-cyber-muted">
             {filtered.filter((c) => !solved[c.id]).length} unsolved
           </span>

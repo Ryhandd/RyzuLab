@@ -70,17 +70,25 @@ export const useAuth = create((set, get) => ({
         .single();
       if (error) throw error;
 
-      const { data: rows, error: solveErr } = await supabase
-        .from("solves")
-        .select("challenge_id, points, solved_at")
-        .eq("user_id", session.user.id)
-        .order("solved_at", { ascending: false });
-      if (solveErr) throw solveErr;
+      // A failed solves query must not blank the whole profile — the profile
+      // itself loaded, so render the app and just start with no solves.
+      let rows = [];
+      try {
+        const { data: solveRows, error: solveErr } = await supabase
+          .from("solves")
+          .select("challenge_id, points, solved_at")
+          .eq("user_id", session.user.id)
+          .order("solved_at", { ascending: false });
+        if (solveErr) throw solveErr;
+        rows = solveRows || [];
+      } catch (solveError) {
+        console.warn("RyzuLab: failed to load solves", solveError);
+      }
 
       const solved = {};
-      for (const r of rows || []) solved[r.challenge_id] = true;
+      for (const r of rows) solved[r.challenge_id] = true;
 
-      set({ profile, solved, activity: rows || [] });
+      set({ profile, solved, activity: rows, authError: null });
     } catch (e) {
       console.warn("RyzuLab: failed to load profile", e);
       set({ authError: "Could not load your profile." });

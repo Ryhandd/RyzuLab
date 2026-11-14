@@ -5,6 +5,7 @@ import { CATEGORY_BY_ID, DIFFICULTY_ACCENT } from "../data/categories";
 import { X, Terminal, BookOpen, CheckCircle, ArrowRight, Lightbulb } from "lucide-react";
 import CodeArtifact from "./CodeArtifact";
 import FlagForm from "./FlagForm";
+import LabPanel from "./LabPanel";
 
 export default function ChallengeModal({ challengeId, onClose, onSolved }) {
   const { isSolved } = useAuth();
@@ -115,6 +116,8 @@ export default function ChallengeModal({ challengeId, onClose, onSolved }) {
 
           {view === "playing" && (
             <div className="space-y-6 animate-fade-in">
+              <LabPanel challenge={challenge} />
+
               <Section title="Artifacts">
                 {challenge.artifacts.map((a, i) => (
                   <CodeArtifact key={i} artifact={a} />

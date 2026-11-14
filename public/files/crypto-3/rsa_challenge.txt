@@ -1,0 +1,17 @@
+RyzuLab Crypto-3 -- RSA Small Private Exponent
+================================================
+
+Public parameters intercepted from the handshake:
+
+n = 978630844369139075997736159308937669825809451982096325584966632735028346073891048226480516210821
+e = 355151954346011741560074465272414587066652721991414273341714452001907984182404044211529115602481
+c = 876758403542263990833295268761468691163571883986826865520319960105034013765103102547921394701390
+
+The private exponent d was generated carelessly and is far smaller than it
+should be for this key size. Recover d directly from (n, e) using Wiener's
+continued-fraction attack (no factoring required), then decrypt:
+
+    m = pow(c, d, n)
+    flag = m.to_bytes((m.bit_length() + 7) // 8, "big")
+
+Reference: M. Wiener, "Cryptanalysis of short RSA secret exponents" (1990).

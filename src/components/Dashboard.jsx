@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useAuth, getRankForScore } from "../store/useAuth";
 import { CATEGORIES, CATEGORY_BY_ID, DIFFICULTY_ACCENT } from "../data/categories";
 import { CHALLENGES } from "../data/challenges";
@@ -11,17 +11,13 @@ export default function Dashboard({ onChallengeSelect }) {
   const { solved, profile } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
-  const challengeGridRef = useRef(null);
 
-  // When a filter changes, bring the challenge list into view so the user
-  // immediately sees that the filter applied. Without this the grid sits
-  // below the fold and filtering looks like a dead click.
+  // Filtering must not move the page — only opening a challenge does. The
+  // challenge list updates in place, and the header tells the user which
+  // filter is active.
   const applyFilter = (nextCategory, nextDifficulty) => {
     if (nextCategory !== undefined) setSelectedCategory(nextCategory);
     if (nextDifficulty !== undefined) setSelectedDifficulty(nextDifficulty);
-    requestAnimationFrame(() => {
-      challengeGridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
   };
 
   const totalChallenges = CHALLENGES.length;
@@ -155,7 +151,7 @@ export default function Dashboard({ onChallengeSelect }) {
       </section>
 
       {/* Challenge grid */}
-      <section ref={challengeGridRef} className="scroll-mt-20">
+      <section className="scroll-mt-20">
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <div className="flex items-center gap-2.5 min-w-0">
             <h2 className="text-lg font-semibold text-white tracking-tight truncate">

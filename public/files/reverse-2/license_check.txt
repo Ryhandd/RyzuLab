@@ -1,0 +1,45 @@
+RyzuLab reverse-2 -- Custom Key-Check Algorithm
+=================================================
+Disassembly-style pseudo-code recovered from the crackme binary
+(function at 0x4011a0, renamed validate_serial for readability).
+
+------------------------------------------------------------------
+0x4011a0  validate_serial(char *s):
+0x4011a4      ; expected[] lives in .rodata at 0x402008
+0x4011a4      unsigned char expected[8] = {
+0x4011a4          0x52, 0x58, 0x5b, 0x56, 0x2d, 0x44, 0x4b, 0x43
+0x4011a4      };
+0x4011b8      for (i = 0; i < 8; i++) {
+0x4011c0          al = s[i]                  ; MOVZX AL, BYTE [s+i]
+0x4011c4          al = al ^ i                ; XOR  AL, i
+0x4011c8          if (al != expected[i])     ; CMP  AL, [expected+i]
+0x4011d0              return 0               ; JNZ  fail
+0x4011d8      }
+0x4011e0      return 1                       ; success branch -> prints flag
+------------------------------------------------------------------
+
+Equivalent C:
+
+    int validate_serial(const char *s) {
+        unsigned char expected[] = {0x52, 0x58, 0x5b, 0x56, 0x2d, 0x44, 0x4b, 0x43};
+        for (int i = 0; i < 8; i++) {
+            if ((unsigned char)s[i] ^ i != expected[i]) return 0;
+        }
+        return 1;
+    }
+
+Task
+----
+The check is   s[i] ^ i == expected[i]   for i in 0..7, so:
+
+    s[i] = expected[i] ^ i
+
+Work this out for every index to recover the serial the binary accepts:
+
+    python3 -c "
+expected = [0x52, 0x58, 0x5b, 0x56, 0x2d, 0x44, 0x4b, 0x43]
+print(''.join(chr(b ^ i) for i, b in enumerate(expected)))
+"
+
+Entering that recovered serial into the running binary is what makes it
+print the flag: RYZU{RE_xor_index_serial}

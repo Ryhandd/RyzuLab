@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dev Panel — Admin Login</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    background: #0f172a; color: #e2e8f0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .card {
+    width: 100%; max-width: 380px; padding: 28px; border-radius: 14px;
+    background: #1e293b; border: 1px solid #334155;
+    box-shadow: 0 24px 60px rgba(0,0,0,.45);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 12px #38bdf8; }
+  h1 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
+  .sub { font-size: 11px; color: #64748b; margin: 2px 0 0; text-transform: uppercase; letter-spacing: .14em; }
+  label { display: block; font-size: 11px; color: #94a3b8; margin: 14px 0 6px; text-transform: uppercase; letter-spacing: .1em; }
+  input {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #334155;
+    background: #0f172a; color: #e2e8f0; font-size: 14px; font-family: inherit;
+  }
+  input:focus { outline: none; border-color: #38bdf8; }
+  button {
+    width: 100%; margin-top: 20px; padding: 11px; border: 0; border-radius: 8px;
+    background: linear-gradient(90deg,#22d3ee,#818cf8); color: #06121f;
+    font-weight: 700; font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+  button:hover { filter: brightness(1.08); }
+  .msg { margin-top: 14px; font-size: 13px; padding: 10px 12px; border-radius: 8px; display: none; }
+  .msg.err { display: block; background: rgba(251,113,133,.12); color: #fda4af; border: 1px solid rgba(251,113,133,.3); }
+  .msg.ok { display: block; background: rgba(52,211,153,.12); color: #6ee7b7; border: 1px solid rgba(52,211,153,.3); }
+  .query { margin-top: 18px; padding: 10px; border-radius: 8px; background: #0b1220; border: 1px solid #1e293b;
+           font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; font-size: 11px; color: #7dd3fc;
+           white-space: pre-wrap; word-break: break-all; }
+  .hintbar { margin-top: 16px; font-size: 10px; color: #475569; text-align: center; letter-spacing: .06em; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">
+    <span class="dot"></span>
+    <div>
+      <h1>Dev Panel</h1>
+      <p class="sub">Admin access</p>
+    </div>
+  </div>
+
+  <form id="f" autocomplete="off">
+    <label for="u">Username</label>
+    <input id="u" name="username" placeholder="admin" />
+    <label for="p">Password</label>
+    <input id="p" name="password" type="text" placeholder="••••••••" />
+    <button type="submit">Sign in</button>
+  </form>
+
+  <div id="msg" class="msg"></div>
+  <div class="query" id="q">SELECT * FROM users WHERE username = '' AND password = ''</div>
+  <div class="hintbar">legacy build · dev-panel.ryzulab.local</div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// This lab reproduces the behaviour of the vulnerable PHP endpoint:
+//   $query = "SELECT * FROM users WHERE username = '$user' AND password = '$pass'";
+// Rather than emulating MySQL, we evaluate the resulting WHERE clause as a
+// boolean expression over a tiny user table, which is exactly what the
+// injected query does when the input escapes the string context.
+// ---------------------------------------------------------------------------
+const USERS = [{ username: "admin", password: "s3cr3t_adm1n_2019" }];
+
+const $u = document.getElementById("u");
+const $p = document.getElementById("p");
+const $msg = document.getElementById("msg");
+const $q = document.getElementById("q");
+
+function buildQuery(user, pass) {
+  return `SELECT * FROM users WHERE username = '${user}' AND password = '${pass}'`;
+}
+
+// Evaluate the WHERE clause the way MySQL would for a single-row table.
+// Handles: ' OR '1'='1' --, ' OR 1=1 #, " OR ""="", and plain credentials.
+function whereMatches(user, pass) {
+  const raw = `username = '${user}' AND password = '${pass}'`;
+
+  // Strip SQL comments: -- ... , # ... , /* ... */
+  const sql = raw
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/--[^\n]*/g, " ")
+    .replace(/#[^\n]*/g, " ");
+
+  // Tokenise the expression: identifiers/strings/operators/numbers/commas/parens
+  const tokens = [];
+  let i = 0;
+  while (i < sql.length) {
+    const c = sql[i];
+    if (/\s/.test(c)) { i++; continue; }
+    if (c === "'" || c === '"') {
+      const quote = c;
+      let j = i + 1, val = "";
+      while (j < sql.length) {
+        if (sql[j] === quote) {
+          if (sql[j + 1] === quote) { val += quote; j += 2; continue; }
+          break;
+        }
+        val += sql[j++];
+      }
+      tokens.push({ t: "str", v: val });
+      i = j + 1;
+      continue;
+    }
+    if (/[0-9]/.test(c)) {
+      let j = i; while (j < sql.length && /[0-9.]/.test(sql[j])) j++;
+      tokens.push({ t: "num", v: Number(sql.slice(i, j)) });
+      i = j; continue;
+    }
+    if (/[A-Za-z_]/.test(c)) {
+      let j = i; while (j < sql.length && /[A-Za-z0-9_]/.test(sql[j])) j++;
+      const word = sql.slice(i, j);
+      if (/^(and|or|not)$/i.test(word)) tokens.push({ t: "op", v: word.toUpperCase() });
+      else if (/^like$/i.test(word)) tokens.push({ t: "op", v: "LIKE" });
+      else tokens.push({ t: "id", v: word.toLowerCase() });
+      i = j; continue;
+    }
+    if (sql.startsWith("=", i) || sql.startsWith("<>", i) || sql.startsWith("!=", i) ||
+        sql.startsWith(">=", i) || sql.startsWith("<=", i) || sql.startsWith(">", i) || sql.startsWith("<", i)) {
+      const two = sql.slice(i, i + 2);
+      if (["<>", "!=", ">=", "<="].includes(two)) { tokens.push({ t: "cmp", v: two }); i += 2; }
+      else { tokens.push({ t: "cmp", v: sql[i] }); i += 1; }
+      continue;
+    }
+    if (c === "(" || c === ")") { tokens.push({ t: c }); i++; continue; }
+    i++; // ignore anything else
+  }
+
+  // Recursive-descent over OR / AND / NOT / comparison
+  let pos = 0;
+  const peek = () => tokens[pos];
+  const eat = (pred) => (pred(peek()) ? tokens[pos++] : null);
+
+  function arrayField(name, row) {
+    if (name === "username") return row.username;
+    if (name === "password") return row.password;
+    return null;
+  }
+
+  // A "term" is either a column reference, a literal, or a parenthesised expr.
+  function parseValue(row) {
+    const tk = peek();
+    if (!tk) return null;
+    if (tk.t === "str" || tk.t === "num") { pos++; return { type: "lit", v: tk.v }; }
+    if (tk.t === "id") {
+      pos++;
+      // users.username / users.password
+      if (peek() && peek().t === "cmp" && peek().v === ".") { pos++; }
+      if (peek() && peek().t === "id") { pos++; }
+      return { type: "col", name: tk.v };
+    }
+    if (tk.t === "(") {
+      pos++;
+      const v = parseOr(row);
+      if (peek() && peek().t === ")") pos++;
+      return { type: "bool", v };
+    }
+    return null;
+  }
+
+  function resolve(val, row) {
+    if (!val) return null;
+    if (val.type === "lit") return val.v;
+    if (val.type === "col") return arrayField(val.name, row);
+    if (val.type === "bool") return val.v;
+    return null;
+  }
+
+  function parseComparison(row) {
+    const left = parseValue(row);
+    const tk = peek();
+    if (!tk || tk.t !== "cmp") {
+      const v = resolve(left, row);
+      // bare truthiness: 1 => true, 'x' => true, 0 => false
+      if (left && left.type === "col") return String(arrayField(left.name, row) ?? "") !== "";
+      return Boolean(v);
+    }
+    pos++;
+    const right = parseValue(row);
+    const a = resolve(left, row);
+    const b = resolve(right, row);
+    switch (tk.v) {
+      case "=": return String(a) === String(b);
+      case "!=": case "<>": return String(a) !== String(b);
+      case ">": return Number(a) > Number(b);
+      case "<": return Number(a) < Number(b);
+      case ">=": return Number(a) >= Number(b);
+      case "<=": return Number(a) <= Number(b);
+      case "LIKE": return new RegExp("^" + String(b).replace(/%/g, ".*").replace(/_/g, ".") + "$").test(String(a));
+      default: return false;
+    }
+  }
+
+  function parseAnd(row) {
+    let v = parseComparison(row);
+    while (peek() && peek().t === "op" && peek().v === "AND") {
+      pos++;
+      const r = parseComparison(row);
+      v = v && r;
+    }
+    return v;
+  }
+
+  function parseOr(row) {
+    let v = parseAnd(row);
+    while (peek() && peek().t === "op" && peek().v === "OR") {
+      pos++;
+      const r = parseAnd(row);
+      v = v || r;
+    }
+    return v;
+  }
+
+  try {
+    return USERS.some((row) => {
+      pos = 0;
+      return parseOr(row);
+    });
+  } catch (e) {
+    return false;
+  }
+}
+
+document.getElementById("f").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const user = $u.value;
+  const pass = $p.value;
+  $q.textContent = buildQuery(user, pass);
+
+  if (whereMatches(user, pass)) {
+    $msg.className = "msg ok";
+    $msg.textContent = "Welcome back, admin. Redirecting to /admin/flag.php …";
+    setTimeout(() => { window.location.href = "flag.html"; }, 900);
+  } else {
+    $msg.className = "msg err";
+    $msg.textContent = "Invalid credentials.";
+  }
+});
+</script>
+</body>
+</html>
